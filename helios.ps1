@@ -3,12 +3,13 @@ Import-Module SqlServer
 
 #DB Creation Notes
 
-#Create assetlist db 
+#Create assets db 
 ##Invoke-Sqlcmd -ServerInstance "localhost" -Query "CREATE DATABASE assets"
 
 #Create assetlist table
 ##Invoke-Sqlcmd -ServerInstance "localhost" -Database "assets" -Query "CREATE TABLE assetList (
-##hostname varchar(255) PRIMARY KEY
+##hostname varchar(255) PRIMARY KEY,
+##checkType varchar(255),
 ##);"
 
 #Invoke-Sqlcmd -ServerInstance "localhost" -Database "assets" -Query "CREATE TABLE assetData (
