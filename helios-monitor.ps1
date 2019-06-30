@@ -1,7 +1,12 @@
-﻿While ($true) {
+﻿#conditional check for connection type (ICMP, TCP, HTTP)
+#ICMP is done. 
+#TCP = Test-NetConnection $hostname -Port # -InformationLevel Quiet
+#HTTP - Invoke-WebRequest ??
+
+While ($true) {
     $runTime = Measure-Command {
         $query = "SELECT * FROM assetlist" #get devices to ping this loop
-        $assets = (Invoke-SqlCmd -ServerInstance "localhost" -Database "assets" -Query $query).ItemArray 
+        $assets = (Invoke-SqlCmd -ServerInstance "localhost" -Database "assets" -Query $query)
 
         $query = "SELECT MAX(iter) FROM assetData" #determine the last ping attempt # and iterate it forward by one
         $lastIter = (Invoke-Sqlcmd -ServerInstance "localhost" -Database "assets" -Query $query).Column1 
@@ -12,12 +17,19 @@
         #Ping Stuff
         Foreach ($asset in $assets) {
             $date = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-            $online = (Test-Connection -ComputerName $asset -Count 1 -Quiet)
+
+            If ($asset.CheckType -eq "ICMP") {
+                $online = (Test-Connection -ComputerName $asset.hostname -Count 1 -Quiet)
+            } ElseIf ($asset.CheckType -eq "TCP") {
+                $online = (Test-NetConnection $asset.hostname -Port $asset.additionalValue -InformationLevel Quiet)
+            }
+
             If (-Not $online) {
                 $online = 0}
             Else {
                 $online = 1}
-            $query = "INSERT INTO assetData (date,hostname,iter,online) VALUES ('$date','$asset','$nextIter','$online')"
+            $hostname = $asset.hostname
+            $query = "INSERT INTO assetData (date,hostname,iter,online) VALUES ('$date','$hostname','$nextIter','$online')"
             $queries += $query
         }
         foreach ($query in $queries) {

@@ -10,6 +10,7 @@ Import-Module SqlServer
 ##Invoke-Sqlcmd -ServerInstance "localhost" -Database "assets" -Query "CREATE TABLE assetList (
 ##hostname varchar(255) PRIMARY KEY,
 ##checkType varchar(255),
+##additionalValue varchar(255)
 ##);"
 
 #Invoke-Sqlcmd -ServerInstance "localhost" -Database "assets" -Query "CREATE TABLE assetData (
@@ -26,8 +27,11 @@ Import-Module SqlServer
 #Add logic to concurrently run test-connections
 #why don't the nav buttons work?????
 
-##phase2
-#add logic to pull last 10 pings, record failure % based on last 10-20 pings
+
+#Create dropdown menu on the AssetManager new input page which populate the new monitortype column
+#create conditional logic on helios-monitor which runs the ICMP/TCP/HTTP test based on the CheckType value associated with the asset'
+
+#consider adding SN integration to look for tickets in the past day referencing the object/IP down and hyperlink in card
 
 $assetPage = New-UDPage -Name "Home" -Icon home -Endpoint {
     New-UDLayout -Columns 3 -Content {
@@ -73,15 +77,19 @@ $assetPage = New-UDPage -Name "Home" -Icon home -Endpoint {
 $inventoryPage = New-UDPage -Name "Asset Manager" -Icon address_book -Endpoint {
     $query = "Select * from assetList;"
     $assets = Invoke-SqlCmd -ServerInstance "localhost" -Database "assets" -Query $query
-    $assetCount = $assets.ItemArray.Count
+    $assetCount = $assets.Count
     New-UDRow -Columns {
         New-UDColumn -size 12 -Endpoint {
             New-UDCard -Text "There are $assetCount monitored systems"
             }
         New-UDColumn -size 6 -Endpoint {
-            New-UDInput -Title "Add an asset" -SubmitText "Add" -Endpoint {
-                param($hostname)
-                $query = "INSERT INTO assetList (hostname) VALUES ('$hostname');"
+            New-UDInput -Title "Add an asset" -SubmitText "Add" -Content {
+                New-UDInputField -Type 'textbox' -Name "hostname" -Placeholder "ENTER IP OR HOSTNAME"
+                New-UDInputField -Type 'select' -Name "checkType" -Placeholder "What type of check should this be?" -DefaultValue "ICMP" -Values @("ICMP","TCP","HTTP")
+                New-UDInputField -Type 'textbox' -Name "additional" -Placeholder "Enter port or endpoint (NOT REQUIRED FOR ICMP"
+            } -Endpoint {
+                param($hostname,$checkType,$additional)
+                $query = "INSERT INTO assetList (hostname,checkType,additionalValue) VALUES ('$hostname','$checkType','$additional');"
                 Invoke-SqlCmd -ServerInstance "localhost" -Database "assets" -Query $query
                 New-UDInputAction -Toast "Added Asset"
             }
