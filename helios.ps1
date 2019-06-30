@@ -33,33 +33,50 @@ $assetPage = New-UDPage -Name "Home" -Icon home -Endpoint {
     New-UDLayout -Columns 3 -Content {
         $query = "SELECT MAX(iter) FROM assetData"
         $lastIter = (Invoke-Sqlcmd -ServerInstance "localhost" -Database "assets" -Query $query).column1
-        $query = ("SELECT * FROM assetData WHERE iter = $lastiter") 
-        $results = Invoke-Sqlcmd -ServerInstance "localhost" -Database "assets" -Query $query | Sort-Object -Property "hostname" -Unique
-            Foreach ($entry in $results) {
-                $name = $entry.hostname
-                $date = $entry.date
-                $online = $entry.online
-                If ($online) {
-                    $color = "Green"
-                    $status = "online"
+        $lastTen = ($lastIter - 9)
+        $query = ("SELECT * FROM assetData WHERE iter > $lastTen") 
+        $lastCheckResults = Invoke-Sqlcmd -ServerInstance "localhost" -Database "assets" -Query $query  #this has all the data
+
+        $query = ("SELECT * FROM assetData WHERE iter = $lastIter") 
+        $results = Invoke-Sqlcmd -ServerInstance "localhost" -Database "assets" -Query $query | Sort-Object -Property "hostname" -Unique #this has only the last check
+        $colorArray = @("Red","#EF6845","#EF7B47","#EF8D49","#EFA04A","#EFB24C","#EFC54E","#EFD750","#EFEA52","Green")
+
+        #Generate a card for each asset
+
+        Foreach ($entry in $results) {
+            $onlineArray = $LastCheckResults | Where-Object -Property "hostname" -EQ $entry.hostname | Select-Object "online"
+            $onlineCount = 0
+            Foreach ($value in $onlineArray.online) {
+                If ($value -eq $true) {
+                    $onlineCount += 1
                 }
-                Else {
-                    $color = "Red"
-                    $status = "offline"
-                }
-        New-UDCard -Title "$name" -Text "Last Checked on $date" -BackgroundColor "$color" 
+            }
+            $cardColor = $colorArray[$onlineCount]
+            $name = $entry.hostname
+            $date = $entry.date
+            $online = $entry.online
+            If ($online) {
+                $color = $cardColor
+                $status = "online"
+            }
+            Else {
+                $color = $cardColor
+                $status = "offline"
+            }
+
+        $failCount = 9 - $onlineCount
+        New-UDCard -Title "$name" -Text "System is $status. Last Checked on $date. Failed $failCount of the most recent tests." -BackgroundColor "$color" 
         }
     }
 } -AutoRefresh -RefreshInterval 10
 
-$inventoryPage = New-UDPage -Name "Asset Manager" -Icon address_book -Endpoint{
+$inventoryPage = New-UDPage -Name "Asset Manager" -Icon address_book -Endpoint {
     $query = "Select * from assetList;"
     $assets = Invoke-SqlCmd -ServerInstance "localhost" -Database "assets" -Query $query
     $assetCount = $assets.ItemArray.Count
     New-UDRow -Columns {
         New-UDColumn -size 12 -Endpoint {
-            #New-UDCard -Text "There are $assetCount monitored systems"
-            New-UDCard -Text "There are 0 monitored systems"
+            New-UDCard -Text "There are $assetCount monitored systems"
             }
         New-UDColumn -size 6 -Endpoint {
             New-UDInput -Title "Add an asset" -SubmitText "Add" -Endpoint {
@@ -80,6 +97,6 @@ $inventoryPage = New-UDPage -Name "Asset Manager" -Icon address_book -Endpoint{
     }
 }
 
-$Dashboard = New-UDDashboard -Title "Critical Asset Monitor" -Pages @($assetPage,$InventoryPage)
+$Dashboard = New-UDDashboard -Title "Helios Asset Monitor" -Pages @($assetPage,$InventoryPage)
 
 Start-UDDashboard -Dashboard $Dashboard -port 8088 -AutoReload
