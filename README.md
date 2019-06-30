@@ -7,3 +7,8 @@ There are two components, the helios.ps1 file which is the webserver utilizing P
 
 Right now it is only testing for ICMP connectivity but shortly there will be a feature added to tell it to monitor for different types of uptime - HTTP 200s, TCP port connectivity, or API repsponses
 
+## Main page looks like the following and is auto refreshed every 10 seconds
+![monitor homepage](https://raw.githubusercontent.com/theabraxas/Project-Helios/master/docs/images/monitor.png)
+
+## Asset Manager looks like the following and allows control of what assets are being tested/managed
+![monitor homepage](https://raw.githubusercontent.com/theabraxas/Project-Helios/master/docs/images/manager.png)
